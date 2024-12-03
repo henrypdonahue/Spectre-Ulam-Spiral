@@ -38,20 +38,6 @@ const colmap53 = {
 	'Phi' : [228, 213, 167],
 	'Psi' : [224, 223, 156] };
 
-const colmap_donahue = {
-		'Gamma' : [238,195,61],
-		'Gamma1' : [238,195,61],
-		'Gamma2' : [229,189,63],
-		'Delta' : [229,189,63],
-		'Theta' : [229,172,63],
-		'Lambda' : [229,172,63],
-		'Xi' : [135, 118, 155],
-		'Pi' : [234,157,62],
-		'Sigma' : [234,157,62],
-		'Phi' : [18,53,36],
-		'Psi' : [49,47,23] };
-
-
 const colmap_orig = {
 	'Gamma' : [255, 255, 255],
 	'Gamma1' : [255, 255, 255],
@@ -82,7 +68,7 @@ const colmap_pride = {
 	'Gamma' : [255, 255, 255],
 	'Gamma1' : [97, 57, 21], 
 	'Gamma2' : [0, 0, 0],
-	'Delta' : [255, 129, 0],
+	'Delta' : [2, 129, 33],
 	'Theta' : [0, 76, 255],
 	'Lambda' : [118, 0, 136],
 	'Xi' : [229, 0, 0],
@@ -194,6 +180,11 @@ function drawPolygon( shape, T, f, s, w )
 		vertex( tp.x, tp.y );
 	}
 	endShape( CLOSE );
+}
+
+function streamPolygon( shape, T, f, s, w )
+{
+
 }
 
 class Shape
@@ -563,7 +554,6 @@ function setup() {
 	shape_sel.option( 'Hexagons' );
 	shape_sel.option( 'Turtles in Hats' );
 	shape_sel.option( 'Hats in Turtles' );
-	shape_sel.option('3d')
 	shape_sel.changed( function() {
 		const s = shape_sel.value();
 		if( s == 'Hexagons' ) {
@@ -575,7 +565,7 @@ function setup() {
 		} else if( s == 'Spectres' ) {
 			sys = buildSpectreBase( true );
 		} else {
-			sys = buildSpectreBase( true );
+			sys = buildSpectreBase( false );
 		}
 		to_screen = [20, 0, 0, 0, -20, 0];
 		lw_scale = 1;
@@ -583,6 +573,7 @@ function setup() {
 	} );
 
 
+/*
 	reset_but = createButton( "Reset" );
 	reset_but.position( 10, 10 );
 	reset_but.size( 125, 25 );
@@ -592,6 +583,7 @@ function setup() {
 		lw_scale = 0.2;
 		loop();
 	} );
+	*/
 
 	subst_button = createButton( "Build Supertiles" );
 	subst_button.position( 10, 60 );
@@ -624,7 +616,6 @@ function setup() {
 	colscheme_sel.option( 'Pride' );
 	colscheme_sel.option( 'Mystics' );
 	colscheme_sel.option( 'Figure 5.3' );
-	colscheme_sel.option( 'Donahue' );
 	colscheme_sel.option( 'Bright' );
 	colscheme_sel.changed( loop );
 
@@ -694,8 +685,6 @@ function draw()
 		colmap = colmap_orig;
 	} else if( s == 'Pride' ) {
 		colmap = colmap_pride;
-	} else if( s == 'Donahue' ) {
-		colmap = colmap_donahue;
 	} else {
 		colmap = colmap_mystics;
 	}
