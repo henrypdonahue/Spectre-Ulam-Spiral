@@ -22,49 +22,19 @@ const tile_names = [
 	'Gamma', 'Delta', 'Theta', 'Lambda', 'Xi',
 	'Pi', 'Sigma', 'Phi', 'Psi' ];
 
-// Color map from Figure 5.3
-const colmap53 = {
-    'Gamma': [240, 248, 255],  // Alice Blue (soft white with a hint of blue)
-    'Gamma1': [220, 230, 235], // Light Grayish Blue
-    'Gamma2': [200, 215, 225], // Light Blue-Gray
-    'Delta': [180, 200, 210],  // Muted Blue-Gray
-    'Theta': [160, 190, 200],  // Subtle Blue
-    'Lambda': [140, 170, 190], // Medium Blue-Gray
-    'Xi': [120, 150, 180],     // Desaturated Blue
-    'Pi': [100, 130, 170],     // Muted Medium Blue
-    'Sigma': [80, 110, 150],   // Slightly Darker Blue
-    'Phi': [60, 90, 130],      // Dark Blue
-    'Psi': [255, 255, 255]     // True White
+let colmap = {
+	'Gamma': [250, 250, 250],  // Almost White
+	'Gamma1': [230, 230, 230], // Very Light Gray
+	'Gamma2': [210, 210, 210], // Light Gray
+	'Delta': [190, 200, 210],  // Subtle Grayish Blue
+	'Theta': [170, 190, 200],  // Soft Blue-Gray
+	'Lambda': [150, 170, 190], // Medium Blue-Gray
+	'Xi': [130, 150, 180],     // Desaturated Blue
+	'Pi': [110, 130, 170],     // Muted Medium Blue
+	'Sigma': [90, 110, 150],   // Slightly Darker Blue
+	'Phi': [70, 90, 130],      // Dark Blue
+	'Psi': [50, 70, 110]       // Deep Blue
 };
-const colmap_donahue = {
-		'Gamma' : [238,195,61],
-		'Gamma1' : [238,195,61],
-		'Gamma2' : [229,189,63],
-		'Delta' : [229,189,63],
-		'Theta' : [229,172,63],
-		'Lambda' : [229,172,63],
-		'Xi' : [135, 118, 155],
-		'Pi' : [234,157,62],
-		'Sigma' : [234,157,62],
-		'Phi' : [18,53,36],
-		'Psi' : [49,47,23] };
-
-
-const colmap_orig = {
-	'Gamma' : [255, 255, 255],
-	'Gamma1' : [255, 255, 255],
-	'Gamma2' : [255, 255, 255],
-	'Delta' : [220, 220, 220],
-	'Theta' : [255, 191, 191],
-	'Lambda' : [255, 160, 122],
-	'Xi' : [255, 242, 0],
-	'Pi' : [135, 206, 250],
-	'Sigma' : [245, 245, 220],
-	'Phi' : [0, 255, 0],
-	'Psi' : [0, 255, 255] };
-
-let colmap = colmap_donahue;
-
 function pt( x, y )
 {
 	return { x : x, y : y };
@@ -155,7 +125,7 @@ function drawPolygon( shape, T, f, s, w )
 		noFill();
 	}
 	if( s != null ) {
-		stroke( 0 );
+		stroke( 255 );
 		strokeWeight( w ) ; // / lw_scale );
 	} else {
 		noStroke();
@@ -167,7 +137,6 @@ function drawPolygon( shape, T, f, s, w )
 	}
 	endShape( CLOSE );
 }
-
 
 class Shape
 {
@@ -202,74 +171,6 @@ class Shape
 		stream.push( s );
 	}
 }
-
-class CurvyShape
-{
-	constructor( pts, quad, label )
-	{
-		this.quad = quad;
-		this.label = label;
-
-		let blah = true;
-
-		this.pts = [pts[pts.length-1]];
-		for( const p of pts ) {
-			const prev = this.pts[this.pts.length-1];
-			const v = psub( p, prev );
-			const w = pt( -v.y, v.x );
-			if( blah ) {
-				this.pts.push( pframe( prev, v, w, 0.33, 0.6 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, 0.6 ) );
-			} else {
-				this.pts.push( pframe( prev, v, w, 0.33, -0.6 ) );
-				this.pts.push( pframe( prev, v, w, 0.67, -0.6 ) );
-			}
-			blah = !blah;
-			this.pts.push( p );
-		}
-	}
-
-	draw( S )
-	{
-		fill( ...colmap[this.label] );
-		strokeWeight( 0.1 );
-		stroke( 0 );
-
-		beginShape();
-		const tp = transPt( S, this.pts[0] );
-		vertex( tp.x, tp.y );
-
-		for( let idx = 1; idx < this.pts.length; idx += 3 ) {
-			const a = transPt( S, this.pts[idx] );
-			const b = transPt( S, this.pts[idx+1] );
-			const c = transPt( S, this.pts[idx+2] );
-
-			bezierVertex( a.x, a.y, b.x, b.y, c.x, c.y );
-		}
-		endShape( CLOSE );
-	}
-
-	streamSVG( S, stream )
-	{
-		const tp = transPt( S, this.pts[0] );
-		vertex( tp.x, tp.y );
-
-		var s = `<path d="M ${tp.x} ${tp.y}`;
-		
-		for( let idx = 1; idx < this.pts.length; idx += 3 ) {
-			const a = transPt( S, this.pts[idx] );
-			const b = transPt( S, this.pts[idx+1] );
-			const c = transPt( S, this.pts[idx+2] );
-
-			s = s + ` C ${a.x} ${a.y} ${b.x} ${b.y} ${c.x} ${c.y}`;	
-		}
-		const col = colmap[this.label];
-
-		s = s + `" stroke="black" stroke-weight="0.1" fill="rgb(${col[0]},${col[1]},${col[2]})" />`;
-		stream.push( s );
-	}
-}
-
 class Meta
 {
 	constructor()
@@ -298,7 +199,7 @@ class Meta
 	}
 }
 
-function buildSpectreBase( curved )
+function buildSpectreBase(  )
 {
 	const spectre = [
 		pt(0, 0),
@@ -325,91 +226,15 @@ function buildSpectreBase( curved )
 
 	for( lab of ['Delta', 'Theta', 'Lambda', 'Xi', 
 				 'Pi', 'Sigma', 'Phi', 'Psi'] ) {
-		if( curved ) {
-			ret[lab] = new CurvyShape( spectre, spectre_keys, lab );
-		} else {
-			ret[lab] = new Shape( spectre, spectre_keys, lab );
-		}
+		ret[lab] = new Shape( spectre, spectre_keys, lab );
 	}
 
 	const mystic = new Meta();
-	if( curved ) {
-		mystic.addChild( 
-			new CurvyShape( spectre, spectre_keys, 'Gamma1' ), ident );
-		mystic.addChild( 
-			new CurvyShape( spectre, spectre_keys, 'Gamma2' ),
-				mul( ttrans( spectre[8].x, spectre[8].y ), trot( PI / 6 ) ) );
-	} else {
-		mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma1' ), ident );
-		mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma2' ),
-			mul( ttrans( spectre[8].x, spectre[8].y ), trot( PI / 6 ) ) );
-	}
+	mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma1' ), ident );
+	mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma2' ),
+		mul( ttrans( spectre[8].x, spectre[8].y ), trot( PI / 6 ) ) );
 	mystic.quad = spectre_keys;
 	ret['Gamma'] = mystic;
-
-	return ret;
-}
-
-function buildHatTurtleBase( hat_dominant )
-{
-	const r3 = 1.7320508075688772;
-	const hr3 = 0.8660254037844386;
-
-	function hexPt( x, y )
-	{
-		return pt( x + 0.5*y, -hr3*y );
-	}
-
-	function hexPt2( x, y )
-	{
-		return pt( x + hr3*y, -0.5*y );
-	}
-
-	const hat = [
-		hexPt(-1, 2), hexPt(0, 2), hexPt(0, 3), hexPt(2, 2), hexPt(3, 0),
-		hexPt(4, 0), hexPt(5,-1), hexPt(4,-2), hexPt(2,-1), hexPt(2,-2),
-		hexPt( 1, -2), hexPt(0,-2), hexPt(-1,-1), hexPt(0, 0) ];
-
-	const turtle = [
-		hexPt(0,0), hexPt(2,-1), hexPt(3,0), hexPt(4,-1), hexPt(4,-2),
-		hexPt(6,-3), hexPt(7,-5), hexPt(6,-5), hexPt(5,-4), hexPt(4,-5),
-		hexPt(2,-4), hexPt(0,-3), hexPt(-1,-1), hexPt(0,-1)
-		];
-
-	const hat_keys = [
-		hat[3], hat[5], hat[7], hat[11]
-	];
-	const turtle_keys = [
-		turtle[3], turtle[5], turtle[7], turtle[11]
-	];
-
-	const ret = {};
-
-	if( hat_dominant ) {
-		for( lab of ['Delta', 'Theta', 'Lambda', 'Xi', 
-					 'Pi', 'Sigma', 'Phi', 'Psi'] ) {
-			ret[lab] = new Shape( hat, hat_keys, lab );
-		}
-
-		const mystic = new Meta();
-		mystic.addChild( new Shape( hat, hat_keys, 'Gamma1' ), ident );
-		mystic.addChild( new Shape( turtle, turtle_keys, 'Gamma2' ),
-			ttrans( hat[8].x, hat[8].y ) );
-		mystic.quad = hat_keys;
-		ret['Gamma'] = mystic;
-	} else {
-		for( lab of ['Delta', 'Theta', 'Lambda', 'Xi', 
-					 'Pi', 'Sigma', 'Phi', 'Psi'] ) {
-			ret[lab] = new Shape( turtle, turtle_keys, lab );
-		}
-
-		const mystic = new Meta();
-		mystic.addChild( new Shape( turtle, turtle_keys, 'Gamma1' ), ident );
-		mystic.addChild( new Shape( hat, hat_keys, 'Gamma2' ),
-			mul( ttrans( turtle[9].x, turtle[9].y ), trot( PI/3 ) ) );
-		mystic.quad = turtle_keys;
-		ret['Gamma'] = mystic;
-	}
 
 	return ret;
 }
@@ -445,7 +270,7 @@ function buildSupertiles( sys )
 	// a list of transformation matrices for placing tiles within
 	// supertiles.
 
-	const quad = sys['Gamma'].quad;
+	const quad = sys['Delta'].quad;
 	const R = [-1,0,0,0,1,0];
 	
 	const t_rules = [
@@ -509,15 +334,6 @@ function buildSupertiles( sys )
 	return ret;
 }
 
-// function isButtonActive( but )
-// {
-// 	return but.elt.style.border.length > 0;
-// }
-
-// function setButtonActive( but, b )
-// {
-// 	but.elt.style.border = (b ? "3px solid black" : "");
-// }
 
 function setup() {
 	createCanvas( windowWidth, windowHeight );
@@ -532,20 +348,11 @@ function setup() {
 	shape_sel.position( 10, 30 );
 	shape_sel.size( 125, 25 );
 	shape_sel.option( 'Tile(1,1)' );
-	shape_sel.option( 'Spectres' );
 	shape_sel.option( 'Hexagons' );
-	shape_sel.option( 'Turtles in Hats' );
-	shape_sel.option( 'Hats in Turtles' );
 	shape_sel.changed( function() {
 		const s = shape_sel.value();
 		if( s == 'Hexagons' ) {
 			sys = buildHexBase();
-		} else if( s == 'Turtles in Hats' ) {
-			sys = buildHatTurtleBase( true );
-		} else if( s == 'Hats in Turtles' ) {
-			sys = buildHatTurtleBase( false );
-		} else if( s == 'Spectres' ) {
-			sys = buildSpectreBase( true );
 		} else {
 			sys = buildSpectreBase( false );
 		}
@@ -566,12 +373,6 @@ function setup() {
 		// Rebuild the system based on the current shape
 		if (currentShape === 'Hexagons') {
 			sys = buildHexBase();
-		} else if (currentShape === 'Turtles in Hats') {
-			sys = buildHatTurtleBase(true);
-		} else if (currentShape === 'Hats in Turtles') {
-			sys = buildHatTurtleBase(false);
-		} else if (currentShape === 'Spectres') {
-			sys = buildSpectreBase(true);
 		} else {
 			sys = buildSpectreBase(false); // Default to Tile(1,1)
 		}
@@ -605,19 +406,8 @@ function setup() {
 		tile_sel.option( name );
 	}
 	tile_sel.value( 'Delta' );
-	tile_sel.changed( loop );
-
-	lab = createSpan( 'Colors' );
-	lab.position( 10, 150 );
-	lab.size( 125, 15 );
 
 	colscheme_sel = createSelect();
-	colscheme_sel.position( 10, 170 );
-	colscheme_sel.size( 125, 25 );
-	colscheme_sel.option( 'Figure 5.3' );
-	colscheme_sel.option( 'Donahue' );
-	colscheme_sel.option( 'Bright' );
-	colscheme_sel.changed( loop );
 	
 	let save_button = createButton( "Save PNG" );
 	save_button.position( 10, 200 );
@@ -660,13 +450,6 @@ function draw()
 		to_screen[2], to_screen[5] );
 
 	const s = colscheme_sel.value();
-	if( s == 'Figure 5.3' ) {
-		colmap = colmap53;
-	} else if( s == 'Bright' ) {
-		colmap = colmap_orig;
-	} else {
-		colmap = colmap_donahue;
-	}
 
 	sys[tile_sel.value()].draw( ident );
 
@@ -681,7 +464,6 @@ function draw()
 	noLoop();
 }
 
-
 function mousePressed() {
     dragging = true; // Start dragging
 	scale_centre = transPt( inv( to_screen ), pt( width/2, height/2 ) );
@@ -689,7 +471,6 @@ function mousePressed() {
 	scale_ts = [...to_screen];
 	loop();
 }
-
 
 function mouseWheel(event) {
     // Set a consistent zoom factor for both in and out
@@ -715,11 +496,8 @@ function mouseDragged() {
     }
 }
 
-
 function mouseReleased()
 {
 	dragging = false;
 	loop();
 }
-
-
