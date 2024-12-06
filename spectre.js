@@ -35,8 +35,8 @@ let colmap = {
 	'Phi': [70, 90, 130],      // Dark Blue
 	'Psi': [50, 70, 110]       // Deep Blue
 };
-function pt( x, y )
-{
+
+function pt( x, y ){
 	return { x : x, y : y };
 }
 
@@ -48,8 +48,7 @@ function inv( T ) {
 };
 
 // Affine matrix multiply
-function mul( A, B )
-{
+function mul( A, B ){
 	return [A[0]*B[0] + A[1]*B[3], 
 		A[0]*B[1] + A[1]*B[4],
 		A[0]*B[2] + A[1]*B[5] + A[2],
@@ -59,24 +58,20 @@ function mul( A, B )
 		A[3]*B[2] + A[4]*B[5] + A[5]];
 }
 
-function padd( p, q )
-{
+function padd( p, q ){
 	return { x : p.x + q.x, y : p.y + q.y };
 }
 
-function psub( p, q )
-{
+function psub( p, q ){
 	return { x : p.x - q.x, y : p.y - q.y };
 }
 
-function pframe( o, p, q, a, b )
-{
+function pframe( o, p, q, a, b ){
 	return { x : o.x + a*p.x + b*q.x, y : o.y + a*p.y + b*q.y };
 }
 
 // Rotation matrix
-function trot( ang )
-{
+function trot( ang ){
 	const c = cos( ang );
 	const s = sin( ang );
 	return [c, -s, 0, s, c, 0];
@@ -88,37 +83,31 @@ function ttrans( tx, ty )
 	return [1, 0, tx, 0, 1, ty];
 }
 
-function transTo( p, q )
-{
+function transTo( p, q ){
 	return ttrans( q.x - p.x, q.y - p.y );
 }
 
-function rotAbout( p, ang )
-{
+function rotAbout( p, ang ){
 	return mul( ttrans( p.x, p.y ), 
 		mul( trot( ang ), ttrans( -p.x, -p.y ) ) );
 }
 
 // Matrix * point
-function transPt( M, P )
-{
+function transPt( M, P ){
 	return pt(M[0]*P.x + M[1]*P.y + M[2], M[3]*P.x + M[4]*P.y + M[5]);
 }
 
 // Match unit interval to line segment p->q
-function matchSeg( p, q )
-{
+function matchSeg( p, q ){
 	return [q.x-p.x, p.y-q.y, p.x,  q.y-p.y, q.x-p.x, p.y];
 };
 
 // Match line segment p1->q1 to line segment p2->q2
-function matchTwo( p1, q1, p2, q2 )
-{
+function matchTwo( p1, q1, p2, q2 ){
 	return mul( matchSeg( p2, q2 ), inv( matchSeg( p1, q1 ) ) );
 };
 
-function drawPolygon( shape, T, f, s, w )
-{
+function drawPolygon( shape, T, f, s, w ){
 	if( f != null ) {
 		fill( ...f );
 	} else {
@@ -138,109 +127,217 @@ function drawPolygon( shape, T, f, s, w )
 	endShape( CLOSE );
 }
 
-class Shape
-{
-	constructor( pts, quad, label )
-	{
-		this.pts = pts;
-		this.quad = quad;
-		this.label = label;
-	}
 
-	draw( S )
-	{
-		drawPolygon( this.pts, S, colmap[this.label], [0,0,0], 0.1 );
-	}
+let globalTileCounter = 1; // Global counter for tile numbering
 
-	streamSVG( S, stream )
-	{
-		var s = '<polygon points="';
-		var at_start = true;
-		for( let p of this.pts ) {
-			const sp = transPt( S, p );
-			if( at_start ) {
-				at_start = false;
-			} else {
-				s = s + ' ';
-			}
-			s = s + `${sp.x},${sp.y}`;
-		}
-		const col = colmap[this.label];
+class Shape {
+    constructor(pts, quad, label) {
+        this.pts = pts; // Polygon points
+        this.quad = quad; // Key points
+        this.label = label; // Tile type
+        this.number = globalTileCounter; // Assign a unique number
+        this.isBlack = false; // Track if the tile is black
+    }
 
-		s = s + `" stroke="black" stroke-weight="0.1" fill="rgb(${col[0]},${col[1]},${col[2]})" />`;
-		stream.push( s );
-	}
-}
-class Meta
-{
-	constructor()
-	{
-		this.geoms = [];
-		this.quad = [];
-	}
+    draw(S) {
+        const color = this.isBlack ? [0, 0, 0] : colmap[this.label];
+        drawPolygon(this.pts, S, color, [0, 0, 0], 0.1);
 
-	addChild( g, T )
-	{
-		this.geoms.push( { geom : g, xform: T } );
-	}
+        const center = this.pts.reduce(
+            (acc, pt) => ({ x: acc.x + pt.x, y: acc.y + pt.y }),
+            { x: 0, y: 0 }
+        );
+        center.x /= this.pts.length;
+        center.y /= this.pts.length;
 
-	draw( S ) 
-	{
-		for( let g of this.geoms ) {
-			g.geom.draw( mul( S, g.xform ) );
-		}
-	}
+        const transformedCenter = transPt(S, center);
 
-	streamSVG( S, stream )
-	{
-		for( let g of this.geoms ) {
-			g.geom.streamSVG( mul( S, g.xform ), stream );
-		}
-	}
-}
+        push();
+        translate(transformedCenter.x, transformedCenter.y);
+        rotate(PI);
+        scale(-1, 1);
+        fill(0);
+        noStroke();
+        textAlign(CENTER, CENTER);
+        textSize(1);
+        text(this.number, 0, 0);
+        pop();
+    }
 
-function buildSpectreBase(  )
-{
-	const spectre = [
-		pt(0, 0),
-		pt(1.0, 0.0),
-		pt(1.5, -0.8660254037844386),
-		pt(2.366025403784439, -0.36602540378443865),
-		pt(2.366025403784439, 0.6339745962155614),
-		pt(3.366025403784439, 0.6339745962155614),
-		pt(3.866025403784439, 1.5),
-		pt(3.0, 2.0),
-		pt(2.133974596215561, 1.5),
-		pt(1.6339745962155614, 2.3660254037844393),
-		pt(0.6339745962155614, 2.3660254037844393),
-		pt(-0.3660254037844386, 2.3660254037844393),
-		pt(-0.866025403784439, 1.5),
-		pt(0.0, 1.0) 
-	];
+    streamSVG(S, stream) {
+        let s = '<polygon points="';
+        for (let p of this.pts) {
+            const sp = transPt(S, p);
+            s += `${sp.x},${sp.y} `;
+        }
+        const col = colmap[this.label];
+        s += `" stroke="white" stroke-weight="0.1" fill="rgb(${col[0]},${col[1]},${col[2]})" />`;
+        stream.push(s);
 
-	const spectre_keys = [
-		spectre[3], spectre[5], spectre[7], spectre[11]
-	];
-
-	const ret = {};
-
-	for( lab of ['Delta', 'Theta', 'Lambda', 'Xi', 
-				 'Pi', 'Sigma', 'Phi', 'Psi'] ) {
-		ret[lab] = new Shape( spectre, spectre_keys, lab );
-	}
-
-	const mystic = new Meta();
-	mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma1' ), ident );
-	mystic.addChild( new Shape( spectre, spectre_keys, 'Gamma2' ),
-		mul( ttrans( spectre[8].x, spectre[8].y ), trot( PI / 6 ) ) );
-	mystic.quad = spectre_keys;
-	ret['Gamma'] = mystic;
-
-	return ret;
+        const center = this.pts.reduce(
+            (acc, pt) => ({ x: acc.x + pt.x, y: acc.y + pt.y }),
+            { x: 0, y: 0 }
+        );
+        center.x /= this.pts.length;
+        center.y /= this.pts.length;
+        const transformedCenter = transPt(S, center);
+        stream.push(
+            `<text x="${transformedCenter.x}" y="${transformedCenter.y}" text-anchor="middle" alignment-baseline="middle" font-size="10" fill="black">${this.number}</text>`
+        );
+    }
 }
 
-function buildHexBase()
-{
+
+class Meta {
+    constructor() {
+        this.geoms = [];
+        this.quad = [];
+    }
+
+    addChild(g, T) {
+        if (g instanceof Shape) {
+            const childGeom = new Shape(g.pts, g.quad, g.label); // Create a unique copy
+            childGeom.number = globalTileCounter++; // Assign a unique number
+            this.geoms.push({ geom: childGeom, xform: T });
+        } else if (g instanceof Meta) {
+            const childGeom = new Meta();
+            g.geoms.forEach((child) => {
+                childGeom.addChild(child.geom, child.xform); // Recursively copy
+            });
+            this.geoms.push({ geom: childGeom, xform: T });
+        }
+    }
+
+    draw(S) {
+        for (let g of this.geoms) {
+            g.geom.draw(mul(S, g.xform));
+        }
+    }
+
+    streamSVG(S, stream) {
+        for (let g of this.geoms) {
+            g.geom.streamSVG(mul(S, g.xform), stream);
+        }
+    }
+}
+
+function buildSpectreBase() {
+    const spectre = [
+        pt(0, 0),
+        pt(1.0, 0.0),
+        pt(1.5, -0.8660254037844386),
+        pt(2.366025403784439, -0.36602540378443865),
+        pt(2.366025403784439, 0.6339745962155614),
+        pt(3.366025403784439, 0.6339745962155614),
+        pt(3.866025403784439, 1.5),
+        pt(3.0, 2.0),
+        pt(2.133974596215561, 1.5),
+        pt(1.6339745962155614, 2.3660254037844393),
+        pt(0.6339745962155614, 2.3660254037844393),
+        pt(-0.3660254037844386, 2.3660254037844393),
+        pt(-0.866025403784439, 1.5),
+        pt(0.0, 1.0),
+    ];
+
+    const spectre_keys = [spectre[3], spectre[5], spectre[7], spectre[11]];
+
+    const ret = {};
+
+    for (let lab of ['Delta', 'Theta', 'Lambda', 'Xi', 'Pi', 'Sigma', 'Phi', 'Psi']) {
+        ret[lab] = new Shape(spectre, spectre_keys, lab);
+    }
+
+    const mystic = new Meta();
+    mystic.addChild(new Shape(spectre, spectre_keys, 'Gamma1'), ident);
+    mystic.addChild(
+        new Shape(spectre, spectre_keys, 'Gamma2'),
+        mul(ttrans(spectre[8].x, spectre[8].y), trot(PI / 6))
+    );
+
+    mystic.quad = spectre_keys;
+    ret['Gamma'] = mystic;
+
+    return ret;
+}
+
+
+
+function buildSupertiles(sys) {
+    const quad = sys['Delta'].quad;
+    const R = [-1, 0, 0, 0, 1, 0];
+
+    const t_rules = [
+        [60, 3, 1],
+        [0, 2, 0],
+        [60, 3, 1],
+        [60, 3, 1],
+        [0, 2, 0],
+        [60, 3, 1],
+        [-120, 3, 3],
+    ];
+
+    const Ts = [ident];
+    let total_ang = 0;
+    let rot = ident;
+    const tquad = [...quad];
+    for (const [ang, from, to] of t_rules) {
+        total_ang += ang;
+        if (ang !== 0) {
+            rot = trot(radians(total_ang));
+            for (let i = 0; i < 4; ++i) {
+                tquad[i] = transPt(rot, quad[i]);
+            }
+        }
+
+        const ttt = transTo(
+            tquad[to],
+            transPt(Ts[Ts.length - 1], quad[from])
+        );
+        Ts.push(mul(ttt, rot));
+    }
+
+    for (let idx = 0; idx < Ts.length; ++idx) {
+        Ts[idx] = mul(R, Ts[idx]);
+    }
+
+    const super_rules = {
+        Gamma: ['Pi', 'Delta', 'null', 'Theta', 'Sigma', 'Xi', 'Phi', 'Gamma'],
+        Delta: ['Xi', 'Delta', 'Xi', 'Phi', 'Sigma', 'Pi', 'Phi', 'Gamma'],
+        Theta: ['Psi', 'Delta', 'Pi', 'Phi', 'Sigma', 'Pi', 'Phi', 'Gamma'],
+        Lambda: ['Psi', 'Delta', 'Xi', 'Phi', 'Sigma', 'Pi', 'Phi', 'Gamma'],
+        Xi: ['Psi', 'Delta', 'Pi', 'Phi', 'Sigma', 'Psi', 'Phi', 'Gamma'],
+        Pi: ['Psi', 'Delta', 'Xi', 'Phi', 'Sigma', 'Psi', 'Phi', 'Gamma'],
+        Sigma: ['Xi', 'Delta', 'Xi', 'Phi', 'Sigma', 'Pi', 'Lambda', 'Gamma'],
+        Phi: ['Psi', 'Delta', 'Psi', 'Phi', 'Sigma', 'Pi', 'Phi', 'Gamma'],
+        Psi: ['Psi', 'Delta', 'Psi', 'Phi', 'Sigma', 'Psi', 'Phi', 'Gamma'],
+    };
+
+    const super_quad = [
+        transPt(Ts[6], quad[2]),
+        transPt(Ts[5], quad[1]),
+        transPt(Ts[3], quad[2]),
+        transPt(Ts[0], quad[1]),
+    ];
+
+    const ret = {};
+
+    for (const [lab, subs] of Object.entries(super_rules)) {
+        const sup = new Meta();
+        for (let idx = 0; idx < 8; ++idx) {
+            if (subs[idx] === 'null') {
+                continue; // Skip null tiles
+            }
+            const child = sys[subs[idx]];
+            sup.addChild(child, Ts[idx]); // Add valid child
+        }
+        sup.quad = super_quad;
+
+        ret[lab] = sup;
+    }
+
+    return ret;
+}
+function buildHexBase(){
 	const hr3 = 0.8660254037844386;
 
 	const hex = [
@@ -264,75 +361,6 @@ function buildHexBase()
 	return ret;
 }
 
-function buildSupertiles( sys )
-{
-	// First, use any of the nine-unit tiles in sys to obtain
-	// a list of transformation matrices for placing tiles within
-	// supertiles.
-
-	const quad = sys['Delta'].quad;
-	const R = [-1,0,0,0,1,0];
-	
-	const t_rules = [
-		[60, 3, 1], [0, 2, 0], [60, 3, 1], [60, 3, 1],
-		[0, 2, 0], [60, 3, 1], [-120, 3, 3] ];  
-
-	const Ts = [ident];
-	let total_ang = 0;
-	let rot = ident;
-	const tquad = [...quad];
-	for( const [ang,from,to] of t_rules ) {
-		total_ang += ang;
-		if( ang != 0 ) {
-			rot = trot( radians( total_ang ) );
-			for( i = 0; i < 4; ++i ) {
-				tquad[i] = transPt( rot, quad[i] );
-			}
-		}
-
-		const ttt = transTo( tquad[to], 
-			transPt( Ts[Ts.length-1], quad[from] ) );
-		Ts.push( mul( ttt, rot ) );
-	}
-
-	for( let idx = 0; idx < Ts.length; ++idx ) {
-		Ts[idx] = mul( R, Ts[idx] );
-	}
-
-	// Now build the actual supertiles, labelling appropriately.
-	const super_rules = {
-		'Gamma' :  ['Pi','Delta','null','Theta','Sigma','Xi','Phi','Gamma'],
-		'Delta' :  ['Xi','Delta','Xi','Phi','Sigma','Pi','Phi','Gamma'],
-		'Theta' :  ['Psi','Delta','Pi','Phi','Sigma','Pi','Phi','Gamma'],
-		'Lambda' : ['Psi','Delta','Xi','Phi','Sigma','Pi','Phi','Gamma'],
-		'Xi' :     ['Psi','Delta','Pi','Phi','Sigma','Psi','Phi','Gamma'],
-		'Pi' :     ['Psi','Delta','Xi','Phi','Sigma','Psi','Phi','Gamma'],
-		'Sigma' :  ['Xi','Delta','Xi','Phi','Sigma','Pi','Lambda','Gamma'],
-		'Phi' :    ['Psi','Delta','Psi','Phi','Sigma','Pi','Phi','Gamma'],
-		'Psi' :    ['Psi','Delta','Psi','Phi','Sigma','Psi','Phi','Gamma'] };
-	const super_quad = [
-		transPt( Ts[6], quad[2] ),
-		transPt( Ts[5], quad[1] ),
-		transPt( Ts[3], quad[2] ),
-		transPt( Ts[0], quad[1] ) ]; 
-
-	const ret = {};
-
-	for( const [lab, subs] of Object.entries( super_rules ) ) {
-		const sup = new Meta();
-		for( let idx = 0; idx < 8; ++idx ) {
-			if( subs[idx] == 'null' ) {
-				continue;
-			}
-			sup.addChild( sys[subs[idx]], Ts[idx] );
-		}
-		sup.quad = super_quad;
-
-		ret[lab] = sup;
-	}
-
-	return ret;
-}
 
 
 function setup() {
@@ -354,7 +382,8 @@ function setup() {
 		if( s == 'Hexagons' ) {
 			sys = buildHexBase();
 		} else {
-			sys = buildSpectreBase( false );
+			sys = buildSpectreBase(
+			 );
 		}
 		to_screen = [20, 0, 0, 0, -20, 0];
 		lw_scale = 1;
@@ -374,7 +403,7 @@ function setup() {
 		if (currentShape === 'Hexagons') {
 			sys = buildHexBase();
 		} else {
-			sys = buildSpectreBase(false); // Default to Tile(1,1)
+			sys = buildSpectreBase(); // Default to Tile(1,1)
 		}
 	
 		// Reset transformations
@@ -437,8 +466,7 @@ function setup() {
     } );
 }
 
-function draw()
-{
+function draw(){
 	background( 255 );
 
 	push();
@@ -496,8 +524,7 @@ function mouseDragged() {
     }
 }
 
-function mouseReleased()
-{
+function mouseReleased(){
 	dragging = false;
 	loop();
 }
